@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chuck Central</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .nav-transition {
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1), opacity 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    .nav-hidden {
+      transform: translateX(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .nav-visible {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Always show hamburger, position top left */
+    #hamburger {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 100;
+    }
+    @media (min-width: 768px) {
+      #navbar {
+        width: 350px;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <!-- Navigation -->
+  <header class="w-full">
+    <nav aria-label="Main navigation" class="relative">
+      <!-- Hamburger always visible -->
+      <button id="hamburger" aria-label="Open navigation" aria-controls="navbar"
+        class="p-3 rounded text-white bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 fixed top-4 left-4 z-50"
+        aria-expanded="false">
+        <span class="block w-7 h-1 bg-white mb-1 rounded"></span>
+        <span class="block w-7 h-1 bg-white mb-1 rounded"></span>
+        <span class="block w-7 h-1 bg-white rounded"></span>
+      </button>
+      <!-- Overlay -->
+      <div id="nav-overlay" class="fixed inset-0 bg-black bg-opacity-40 z-40 hidden"></div>
+      <!-- Popout nav (one nav for all screens) -->
+      <div id="navbar"
+        class="nav-transition nav-hidden fixed top-0 left-0 h-full w-64 md:w-96 bg-gray-900 z-50 flex flex-col gap-8 p-10 shadow-lg"
+        style="max-width: 90vw;">
+        <a href="index.html" class="text-white font-bold text-2xl hover:underline focus:underline focus:outline-none" tabindex="0">Home</a>
+        <a href="about.html" class="text-white font-bold text-2xl hover:underline focus:underline focus:outline-none" tabindex="0">About</a>
+        <a href="contact.html" class="text-white font-bold text-2xl hover:underline focus:underline focus:outline-none" tabindex="0">Contact</a>
+        <a href="article-index.html" aria-current="page" class="text-blue-300 font-bold text-2xl hover:underline focus:underline focus:outline-none" tabindex="0">Articles</a>
+      </div>
+    </nav>
+  </header>
+  <!-- Main Content -->
+  <main id="main-content" class="flex-1 w-full max-w-6xl mx-auto px-2 sm:px-4 py-8 pt-24 md:pt-8">
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-center mb-8 text-gray-900 bg-white bg-opacity-80 rounded p-2">King Chuck Norris</h1>
+    <!-- Tags Filter -->
+    <div id="tags-container" class="flex flex-wrap gap-2 justify-center mb-8"></div>
+    <section id="articles-section" class="articles grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Articles will be rendered here by JS -->
+    </section>
+  </main>
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white px-6 py-8 mt-8">
+    <h2 class="text-2xl font-bold mb-2">Contact Whopper Central</h2>
+    <address class="not-italic leading-relaxed mb-2">
+      Whopper Central HQ<br>
+      123 Burger Blvd, Flavor Town, USA<br>
+      Phone: <a href="tel:+18005551234" class="text-blue-300 hover:underline focus:underline focus:outline-none">1-800-WHOPPER (1-800-555-1234)</a><br>
+      Email: <a href="mailto:contact@whoppercentral.com" class="text-blue-300 hover:underline focus:underline focus:outline-none">contact@whoppercentral.com</a><br>
+      Follow us on
+      <a href="https://twitter.com/whoppercentral" class="text-blue-300 hover:underline focus:underline focus:outline-none" aria-label="Visit our Twitter profile">Twitter</a>,
+      <a href="https://instagram.com/whoppercentral" class="text-blue-300 hover:underline focus:underline focus:outline-none" aria-label="Visit our Instagram profile">Instagram</a>, and
+      <a href="https://facebook.com/whoppercentral" class="text-blue-300 hover:underline focus:underline focus:outline-none" aria-label="Visit our Facebook profile">Facebook</a>
+    </address>
+    <p class="text-sm mt-2">&copy; 2025 Whopper Central. All rights reserved.</p>
+  </footer>
+  <script>
+  // Hamburger menu logic
+  const hamburger = document.getElementById('hamburger');
+  const navbar = document.getElementById('navbar');
+  const overlay = document.getElementById('nav-overlay');
+
+  function openNav() {
+    navbar.classList.remove('nav-hidden');
+    navbar.classList.add('nav-visible');
+    overlay.classList.remove('hidden');
+    hamburger.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeNav() {
+    navbar.classList.remove('nav-visible');
+    navbar.classList.add('nav-hidden');
+    overlay.classList.add('hidden');
+    hamburger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
+  }
+  hamburger.addEventListener('click', () => {
+    if (navbar.classList.contains('nav-visible')) {
+      closeNav();
+    } else {
+      openNav();
+    }
+  });
+  overlay.addEventListener('click', closeNav);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeNav();
+  });
+
+  // --- Fetch articles from Chuck Norris API ---
+  let articles = [];
+  let allTags = [];
+  let selectedTag = null;
+
+  const tagsContainer = document.getElementById('tags-container');
+  const section = document.getElementById('articles-section');
+
+  async function fetchArticles() {
+    // Get all categories (tags)
+    const categoriesRes = await fetch('https://api.chucknorris.io/jokes/categories');
+    allTags = await categoriesRes.json();
+
+    // Fetch 2 jokes per category
+    const jokePromises = [];
+    for (const cat of allTags) {
+      // First joke with only this category
+      jokePromises.push(
+        fetch(`https://api.chucknorris.io/jokes/random?category=${cat}`)
+          .then(res => res.json())
+          .then(joke => ({
+            title: `Chuck Norris Joke (${cat.charAt(0).toUpperCase() + cat.slice(1)})`,
+            date: new Date().toLocaleDateString(),
+            img: joke.icon_url,
+            alt: "Chuck Norris joke icon",
+            link: joke.url,
+            linkLabel: "View on Chuck Norris API",
+            description: joke.value,
+            tags: [cat]
+          }))
+      );
+      // Second joke with this category + a random other category (if possible)
+      let otherCats = allTags.filter(c => c !== cat);
+      let secondCat = otherCats.length > 0 ? otherCats[Math.floor(Math.random() * otherCats.length)] : cat;
+      jokePromises.push(
+        fetch(`https://api.chucknorris.io/jokes/random?category=${cat}`)
+          .then(res => res.json())
+          .then(joke => ({
+            title: `Chuck Norris Joke (${cat.charAt(0).toUpperCase() + cat.slice(1)}, ${secondCat.charAt(0).toUpperCase() + secondCat.slice(1)})`,
+            date: new Date().toLocaleDateString(),
+            img: joke.icon_url,
+            alt: "Chuck Norris joke icon",
+            link: joke.url,
+            linkLabel: "View on Chuck Norris API",
+            description: joke.value,
+            tags: [cat, secondCat]
+          }))
+      );
+    }
+
+    articles = await Promise.all(jokePromises);
+    renderTags();
+    renderArticles();
+  }
+
+  function renderTags() {
+    tagsContainer.innerHTML = '';
+    // "All" tag
+    const allBtn = document.createElement('button');
+    allBtn.textContent = 'All';
+    allBtn.className = `px-3 py-1 rounded-full border font-semibold ${selectedTag === null ? 'bg-blue-700 text-white' : 'bg-white text-blue-700 border-blue-700'} hover:bg-blue-700 hover:text-white transition`;
+    allBtn.onclick = () => {
+      selectedTag = null;
+      renderTags();
+      renderArticles();
+    };
+    tagsContainer.appendChild(allBtn);
+
+    allTags.forEach(tag => {
+      const btn = document.createElement('button');
+      btn.textContent = tag.charAt(0).toUpperCase() + tag.slice(1);
+      btn.className = `px-3 py-1 rounded-full border font-semibold ${selectedTag === tag ? 'bg-blue-700 text-white' : 'bg-white text-blue-700 border-blue-700'} hover:bg-blue-700 hover:text-white transition`;
+      btn.onclick = () => {
+        selectedTag = tag;
+        renderTags();
+        renderArticles();
+      };
+      tagsContainer.appendChild(btn);
+    });
+  }
+
+  function renderArticles() {
+    section.innerHTML = '';
+
+    // Filter articles by tag if selected
+    const filtered = selectedTag
+      ? articles.filter(article => article.tags.includes(selectedTag))
+      : articles;
+
+    filtered.forEach((article, idx) => {
+      // Featured article
+      if (idx === 0 && !selectedTag) {
+        section.innerHTML += `
+          <article class="card featured col-span-1 md:col-span-2 lg:col-span-3 flex flex-col md:flex-row bg-white bg-opacity-90 rounded-xl shadow-lg overflow-hidden">
+            <figure class="flex-shrink-0 flex justify-center items-center bg-gray-100 md:w-1/3">
+              <img src="${article.img}" alt="${article.alt}" class="object-cover w-full h-48 md:h-64 md:w-full rounded-t-xl md:rounded-l-xl md:rounded-tr-none" />
+            </figure>
+            <section class="flex-1 p-6 flex flex-col justify-center">
+              <p class="text-gray-500 text-sm mb-1">${article.date}</p>
+              <h2 class="text-2xl font-bold mb-2">
+                <a href="${article.link}" aria-label="${article.linkLabel}" class="text-blue-700 hover:underline focus:underline focus:outline-none">${article.title}</a>
+              </h2>
+              <p class="text-gray-700">${article.description}</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                ${article.tags.map(tag => `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">${tag}</span>`).join('')}
+              </div>
+            </section>
+          </article>
+        `;
+      } else {
+        section.innerHTML += `
+          <article class="card bg-white bg-opacity-90 rounded-xl shadow p-6 flex flex-col">
+            <p class="text-gray-500 text-sm mb-1">${article.date}</p>
+            <h2 class="text-xl font-semibold mb-2">
+              <a href="${article.link}" aria-label="${article.linkLabel}" class="text-blue-700 hover:underline focus:underline focus:outline-none">${article.title}</a>
+            </h2>
+            <p class="text-gray-700">${article.description}</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              ${article.tags.map(tag => `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">${tag}</span>`).join('')}
+            </div>
+          </article>
+        `;
+      }
+    });
+
+    // If no articles match
+    if (filtered.length === 0) {
+      section.innerHTML = `<div class="col-span-full text-center text-gray-700 bg-white bg-opacity-80 rounded p-6">No articles found for this tag.</div>`;
+    }
+  }
+
+  // Initial fetch and render
+  fetchArticles();
+</script>
+</body>
+</html>
